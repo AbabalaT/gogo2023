@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="project2plane" type="project2plane_node" name="projection_node" output="screen" respawn="true">
+    </node>
+</launch>

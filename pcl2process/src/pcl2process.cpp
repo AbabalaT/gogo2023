@@ -63,59 +63,24 @@ void getcloud_air(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
         return;
     }
     else{
-        pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
-        pcl::VoxelGrid<pcl::PointXYZ> filter;
-        filter.setInputCloud(pcl2cloud);
-        filter.setLeafSize(0.04f, 0.04f, 0.04f);
-        filter.filter(*pcl2cloud);
-        ne.setInputCloud(pcl2cloud);
-        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-        ne.setSearchMethod(tree);
-        //存储输出数据
-        pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
-        //ne.setRadiusSearch(0.03); //使用半径在查询点周围3厘米范围内的所有临近元素
-        ne.setKSearch(10); //使用最近的10个点
-        ne.compute(*cloud_normals);
         long point_num = 0;
         for (long i = 0; i <= pcl2cloud->points.size(); i = i + 1) {
-            float gradient = (pow(cloud_normals->points[i].normal_x, 2) + pow(cloud_normals->points[i].normal_y, 2)) / pow(cloud_normals->points[i].normal_z, 2);
-            if(gradient > 1.0f){
-                if(pcl2cloud->points[i].y > 6.6 or pcl2cloud->points[i].y < -6.6){
-                    continue;
-                }
-                if(pow(pcl2cloud->points[i].x - current_x, 2) + pow(pcl2cloud->points[i].y - current_y, 2) > 0.09){
-                    pcl2cloud->points[i].z = 0;
-                    pcl2cloud_out->points.push_back(pcl2cloud->points[i]);
-                    point_num = point_num + 1;
-                }
+            if(pcl2cloud->points[i].x < 0.25 and pcl2cloud->points[i].x > -0.25
+                and pcl2cloud->points[i].y < 0.25 and pcl2cloud->points[i].y > -0.25){
+                continue;
+            }
+            if(pcl2cloud->points[i].z < 0.2 and pcl2cloud->points[i].z > -0.5){
+                pcl2cloud->points[i].z = 0;
+                pcl2cloud_out->points.push_back(pcl2cloud->points[i]);
+                point_num = point_num + 1;
             }
         }
-
-        pcl::PointXYZ point4push;
-        for (float x = -7.00; x < 22.0; x = x + 0.05) {
-            point4push.x = x;
-            point4push.y = -7.85f;
-            point4push.z = 0.2f;
-            pcl2cloud_out->points.push_back(point4push);
-            point4push.y = 7.85f;
-            pcl2cloud_out->points.push_back(point4push);
-            point_num = point_num + 2;
-        }
-        for (float y = -7.85; y < 7.85; y = y + 0.05) {
-            point4push.x = -7.00f;
-            point4push.y = y;
-            point4push.z = 0.2f;
-            pcl2cloud_out->points.push_back(point4push);
-            point4push.x = 22.0f;
-            pcl2cloud_out->points.push_back(point4push);
-            point_num = point_num + 2;
-        }
-
+        
         pcl2cloud_out->width = point_num;
         pcl2cloud_out->height = 1;
         pcl2cloud_out->points.resize(pcl2cloud_out->width * pcl2cloud_out->height);
         pcl::toROSMsg(*pcl2cloud_out, ROSPCL_output);
-        ROSPCL_output.header.frame_id = "map";
+        ROSPCL_output.header.frame_id = "plane_base_link";
         pcl_publisher.publish(ROSPCL_output);
     }
 }

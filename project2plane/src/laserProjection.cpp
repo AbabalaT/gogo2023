@@ -18,14 +18,13 @@
 #include <cv_bridge/cv_bridge.h>
 
 ros::Publisher pub;
-bool publish_tf = false;
+bool publish_tf = true;
 
-bool callbacked_flag = false;
 tf2_ros::Buffer tfBuffer;
 
 void project2plane_callback(const ros::TimerEvent&){    //将3D位置投影到2D地图上用于导航
     static tf2_ros::TransformBroadcaster br;
-    geometry_msgs::TransformStamped laser2base, base2map;
+    geometry_msgs::TransformStamped base2map;
     try {
         base2map = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
     }
@@ -36,6 +35,7 @@ void project2plane_callback(const ros::TimerEvent&){    //将3D位置投影到2D
 
     tf2::Quaternion b2m{base2map.transform.rotation.x, base2map.transform.rotation.y,
                         base2map.transform.rotation.z, base2map.transform.rotation.w};
+
     double roll = 0, pitch = 0, yaw = 0;
     tf2::Matrix3x3(b2m).getRPY(roll, pitch, yaw);
 
@@ -52,50 +52,6 @@ void project2plane_callback(const ros::TimerEvent&){    //将3D位置投影到2D
         trans.transform.translation.z = 0;
         br.sendTransform(trans);
     }
-}
-
-void laserCallback(const sensor_msgs::LaserScan::ConstPtr &msg) {   //根据当前姿态对线性激光结果进行转换
-    sensor_msgs::LaserScan new_msg = *msg;
-    static tf2_ros::TransformBroadcaster br;
-    geometry_msgs::TransformStamped laser2base, base2map;
-    try {
-        base2map = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
-    }
-    catch (tf2::TransformException &ex) {
-        ROS_WARN("Project2Scan Get TF ERROR!");
-        return;
-    }
-
-    tf2::Quaternion b2m{base2map.transform.rotation.x, base2map.transform.rotation.y,
-                        base2map.transform.rotation.z, base2map.transform.rotation.w};
-    double roll = 0, pitch = 0, yaw = 0;
-    tf2::Matrix3x3(b2m).getRPY(roll, pitch, yaw);
-    float theta = new_msg.angle_min;
-    for (auto &it: new_msg.ranges) {
-        it = it * cos(pitch*cos(theta));
-        theta = theta + new_msg.angle_increment;
-    }
-    //ROS_INFO("Start Angle: %f, End Angle: %f", new_msg.angle_min, new_msg.angle_max);
-    new_msg.header.frame_id = "plane_" + new_msg.header.frame_id;
-    for(int i = 0; i<10; i=i+1){
-        new_msg.ranges[i]=0.0;
-    }
-    for(int i = 631; i<640; i=i+1){
-        new_msg.ranges[i]=0.0;
-    }
-    pub.publish(new_msg);
-
-}
-
-void depth_img_callback(const sensor_msgs::ImageConstPtr& msg){
-    cv::Mat cv_img0 =  cv_bridge::toCvCopy(msg, "16UC1")->image;
-    cv::imshow("depth", cv_img0);
-    cv::waitKey(1);
-    /*
-    sensor_msgs::LaserScan new_msg;
-    。。。处理深度图到扫瞄。。。
-    。。。投影转平面。。。
-    */
 }
 
 int main(int argc, char **argv) {
