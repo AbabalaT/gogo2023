@@ -101,17 +101,8 @@ void depth_img_callback(const sensor_msgs::ImageConstPtr& msg){
 int main(int argc, char **argv) {
     ros::init(argc, argv, "laser_projection");
     ros::NodeHandle pnh("~");
-    pnh.param<bool>("publish_tf", publish_tf, false);
     tf2_ros::TransformListener tfListener(tfBuffer);
-//#ifndef USE_CUSTOM_LASER2SCAN
-    auto sub1 = pnh.subscribe("/scan", 100, laserCallback);
     ros::Timer timer1 = pnh.createTimer(ros::Duration(0.02), project2plane_callback);
-//    auto odomSub = pnh.subscribe<nav_msgs::Odometry>("/Odometry", 10, lidar_to_odom);
-//#else
-    //auto sub2 = pnh.subscribe("/depth_image", 100, depth_img_callback);
-//#endif
-    pub = pnh.advertise<sensor_msgs::LaserScan>("/projected_scan", 1);
     ros::spin();
-//    cv::destroyWindow("depth");
     return 0;
 }
