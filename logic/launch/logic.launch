@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="logic" type="logic_node.py" name="logic_control_node" required="true" output="screen" respawn="true"/>
+</launch>

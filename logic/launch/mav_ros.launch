@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find px4)/launch/px4.launch">
+        <arg name="fcu_url"default="/dev/ttyACM0:115200"/>
+        <arg name="tgt_system" value="201"/>
+        <arg name="tgt_component" value="1"/>
+    </include>
+</launch>
