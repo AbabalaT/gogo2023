@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="vision" type="vision_node" name="vision_node" output="screen" respawn="true">
+    </node>
+</launch>
