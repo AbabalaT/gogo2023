@@ -3,17 +3,31 @@ project(vision)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
-
+set(CMAKE_CXX_STANDARD 11)
 # set(realsense2_DIR "/usr/share/librealsense2")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+include_directories(
+    #OpenVINO推理引擎的头文件
+    /opt/intel/openvino_2021/deployment_tools/inference_engine/include/
+    /opt/intel/openvino_2021/deployment_tools/ngraph/include/
+)
+set(ngraph_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/ngraph/cmake")
+set(InferenceEngine_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/share/")
+
 find_package(
   catkin REQUIRED COMPONENTS
   roscpp
   OpenCV REQUIRED
 )
 
+#set(InferenceEngine_DIR "./deployment_tools/inference_engine/share/cmake")
+find_package(InferenceEngine REQUIRED)
+
+#set(ngraph_DIR "./deployment_tools/ngraph")
+find_package(ngraph REQUIRED)
+#set(ngraph_INCLUDE_DIRS "./deployment_tools/ngraph/include/")
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -125,7 +139,14 @@ include_directories(
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/vision.cpp
 # )
+add_library (detector SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/detector.cpp)
 
+target_include_directories(detector
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PUBLIC ${OpenCV_INCLUDE_DIR}
+        PUBLIC ${InferenceEngine_INCLUDE_DIRS}
+#        PUBLIC ${ngraph_INCLUDE_DIRS}
+)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -147,10 +168,17 @@ add_executable(${PROJECT_NAME}_node src/main.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(detector
+        ${OpenCV_LIBS}
+        ${InferenceEngine_LIBRARIES}
+        ${ngraph_LIBRARIES}
+)
+
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   realsense2
+  detector
 )
 
 #############

@@ -348,7 +348,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "pointcloud_process");
     ros::NodeHandle pnh("~");
     tf2_ros::TransformListener tfListener(tfBuffer);
-    auto subCloud = pnh.subscribe<sensor_msgs::PointCloud2>("/pointcloud2_in", 1, getcloud_vec);
+    auto subCloud = pnh.subscribe<sensor_msgs::PointCloud2>("/pointcloud2_in", 1, getcloud_air);
     pcl_publisher = pnh.advertise<sensor_msgs::PointCloud2>("/pointcloud2_out", 1);
     ros::spin();
     return 0;

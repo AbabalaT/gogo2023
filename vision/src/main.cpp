@@ -7,8 +7,13 @@
 #include <librealsense2/rs.hpp>
 #include <librealsense2/rsutil.h>
 #include <iostream>
+#include "detector.h"
 
 int main(int argc, char **argv){
+    Detector* detector = new Detector;
+    string xml_path = "../res/best.xml";
+    detector->init(xml_path,0.1,0.3);
+
     ros::init(argc, argv, "vision_node");
     ros::NodeHandle nh("~");
 
@@ -32,6 +37,9 @@ int main(int argc, char **argv){
         rs2::video_stream_profile depth_stream_profile = aligned_depth_stream.get_profile().as<rs2::video_stream_profile>();
         const auto depth_intrinsics = depth_stream_profile.get_intrinsics(); //获取对齐后的深度内参
         cv::Mat color_image(cv::Size(640, 480), CV_8UC3, (void*)color_stream.get_data(), cv::Mat::AUTO_STEP);
+
+
+
 
 		float pixe_center[2], point_in_color_coordinates[3];
 		pixe_center[0] = 320;
