@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-	<include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/>
+	<!-- <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360.launch"/> -->
     <include file="$(find point_lio)/launch/mapping_avia.launch"/>
     <include file="$(find logic)/launch/mav_ros.launch"/>
     <include file="$(find vision)/launch/vision.launch"/>
