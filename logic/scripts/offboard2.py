@@ -5,7 +5,9 @@ from geometry_msgs.msg import PoseStamped, Twist
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, CommandBoolRequest, SetMode, SetModeRequest
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+import serial
 import tf
+import struct
 
 nav_teb = False
 
@@ -18,6 +20,7 @@ current_z = 0
 current_yaw = 0
 
 hit_moving_target = False
+passing_door = False
 
 servo_position = 0
 timer_cnt = 3.0
@@ -73,6 +76,11 @@ def teb_pos_publish(event):
 def state_cb(msg):
     global current_state
     current_state = msg
+
+def servo_commmand_callback(event):
+    servo_cmd = rospy.get_param('/mission/servo_pos')
+    serial_buff = struct.pack('B', servo_cmd)
+    serial_port.write(serial_buff)
 
 
 def mission_step_callback(event):
@@ -171,7 +179,7 @@ def mission_act_callback(event):
         nav_teb = False
     elif current_step == 5:
         timer_cnt = timer_cnt - 0.05
-        servo_position = 1
+        rospy.set_param('/mission/servo_pos', 1)
         pose.pose.position.x = p1x
         pose.pose.position.y = p1y
         pose.pose.position.z = eject_height
@@ -190,7 +198,7 @@ def mission_act_callback(event):
         nav_teb = False
     elif current_step == 8:
         timer_cnt = timer_cnt - 0.05
-        servo_position = 2
+        rospy.set_param('/mission/servo_pos', 2)
         pose.pose.position.x = p2x
         pose.pose.position.y = p2y
         pose.pose.position.z = eject_height
@@ -209,7 +217,7 @@ def mission_act_callback(event):
         nav_teb = False
     elif current_step == 11:
         timer_cnt = timer_cnt - 0.05
-        servo_position = 3
+        rospy.set_param('/mission/servo_pos', 3)
         pose.pose.position.x = p3x
         pose.pose.position.y = p3y
         pose.pose.position.z = eject_height
@@ -254,9 +262,19 @@ if __name__ == "__main__":
 
     rospy.set_param('/mission/step', 0)
     rospy.set_param('/mission/cruise_height', 1.5)
+    rospy.set_param('/mission/servo_pos', 0)
     location_listener = tf.TransformListener()
     # Setpoint publishing MUST be faster than 2Hz
     rate = rospy.Rate(20)
+
+
+    serial_port = serial.Serial(
+        port="/dev/ttyUSB0",   
+        baudrate=115200,
+        bytesize=serial.EIGHTBITS,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+    )
 
     # Wait for Flight Controller connection
     while (not rospy.is_shutdown() and not current_state.connected):
@@ -291,6 +309,7 @@ if __name__ == "__main__":
     timer_02 = rospy.Timer(rospy.Duration(0.05), mission_act_callback)
     timer_03 = rospy.Timer(rospy.Duration(1.0), teb_pos_publish)
     timer_04 = rospy.Timer(rospy.Duration(0.1), tf_get_timer_callback)
+    timer_05 = rospy.Timer(rospy.Duration(0.1), servo_commmand_callback)
     rospy.spin()
     # offb_set_mode = SetModeRequest()
     # offb_set_mode.custom_mode = 'OFFBOARD'
