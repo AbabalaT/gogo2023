@@ -98,7 +98,10 @@ def mission_step_callback(event):
     elif current_step == 3:
         if abs(current_x - p1x) < 0.25:
             if abs(current_y - p1y) < 0.25:
-                rospy.set_param('/mission/step', 4)
+                rospy.set_param('/mission/step', 21)
+    elif current_step == 21:
+        if timer_cnt < 0:
+            rospy.set_param('/mission/step', 4)
     elif current_step == 4:
         if abs(current_x - p1x) < 0.15:
             if abs(current_y - p1y) < 0.15:
@@ -110,7 +113,10 @@ def mission_step_callback(event):
     elif current_step == 6:
         if abs(current_x - p2x) < 0.25:
             if abs(current_y - p2y) < 0.25:
-                rospy.set_param('/mission/step', 7)
+                rospy.set_param('/mission/step', 22)
+    elif current_step == 22:
+        if timer_cnt < 0:
+            rospy.set_param('/mission/step', 7)
     elif current_step == 7:
         if abs(current_x - p2x) < 0.15:
             if abs(current_y - p2y) < 0.15:
@@ -122,7 +128,10 @@ def mission_step_callback(event):
     elif current_step == 9:
         if abs(current_x - p3x) < 0.25:
             if abs(current_y - p3y) < 0.25:
-                rospy.set_param('/mission/step', 10)
+                rospy.set_param('/mission/step', 23)
+    elif current_step == 23:
+        if timer_cnt < 0:
+            rospy.set_param('/mission/step', 10)
     elif current_step == 10:
         if abs(current_x - p3x) < 0.15:
             if abs(current_y - p3y) < 0.15:
@@ -144,10 +153,17 @@ def mission_step_callback(event):
         if abs(current_x - e1x) < 0.25:
             if abs(current_y - e1y) < 0.25:
                 rospy.set_param('/mission/step', 15)
+    elif current_step == 15:
+        if current_z < 0.1:
+            rospy.set_param('/mission/step', 16)
+    elif current_step == 16:
+        if timer_cnt < 0:
+            rospy.set_param('/mission/step', 17)
 
 
 def mission_act_callback(event):
     global pose, nav_teb, timer_cnt, servo_position
+    global p1x, p1y, p2x, p2y, p3x, p3y, f1x, f1y, e1x, e1y
     current_step = rospy.get_param("/mission/step")
     print('Step:', current_step)
     if current_step == 0:
@@ -171,7 +187,22 @@ def mission_act_callback(event):
         pose.pose.position.y = p1y
         pose.pose.position.z = cruise_height
         nav_teb = True
+        timer_cnt = 3.0
+    elif current_step == 21:
+        timer_cnt = timer_cnt - 0.05
+        if rospy.get_param('/detect/id') != 10:
+            pre_x = rospy.get_param('/target/x')
+            pre_y = rospy.get_param('/target/y')
+        if abs(current_x - pre_x) < 1.5:
+            if abs(current_y - pre_y) < 1.5:
+                p1x = pre_x
+                p1y = pre_y
+        pose.pose.position.x = p1x
+        pose.pose.position.y = p1y
+        pose.pose.position.z = cruise_height
+        nav_teb = False
     elif current_step == 4:
+        timer_cnt = 3.0
         pose.pose.position.x = p1x
         pose.pose.position.y = p1y
         pose.pose.position.z = eject_height
@@ -190,7 +221,21 @@ def mission_act_callback(event):
         pose.pose.position.y = p2y
         pose.pose.position.z = cruise_height
         nav_teb = True
+    elif current_step == 22:
+        timer_cnt = timer_cnt - 0.05
+        if rospy.get_param('/detect/id') != 10:
+            pre_x = rospy.get_param('/target/x')
+            pre_y = rospy.get_param('/target/y')
+        if abs(current_x - pre_x) < 1.5:
+            if abs(current_y - pre_y) < 1.5:
+                p2x = pre_x
+                p2y = pre_y
+        pose.pose.position.x = p2x
+        pose.pose.position.y = p2y
+        pose.pose.position.z = cruise_height
+        nav_teb = False
     elif current_step == 7:
+        timer_cnt = 3.0
         pose.pose.position.x = p2x
         pose.pose.position.y = p2y
         pose.pose.position.z = eject_height
@@ -209,7 +254,21 @@ def mission_act_callback(event):
         pose.pose.position.y = p3y
         pose.pose.position.z = cruise_height
         nav_teb = True
+    elif current_step == 23:
+        timer_cnt = timer_cnt - 0.05
+        if rospy.get_param('/detect/id') != 10:
+            pre_x = rospy.get_param('/target/x')
+            pre_y = rospy.get_param('/target/y')
+        if abs(current_x - pre_x) < 1.5:
+            if abs(current_y - pre_y) < 1.5:
+                p3x = pre_x
+                p3y = pre_y
+        pose.pose.position.x = p3x
+        pose.pose.position.y = p3y
+        pose.pose.position.z = cruise_height
+        nav_teb = False
     elif current_step == 10:
+        timer_cnt = 3.0
         pose.pose.position.x = p3x
         pose.pose.position.y = p3y
         pose.pose.position.z = eject_height
@@ -240,11 +299,19 @@ def mission_act_callback(event):
         pose.pose.position.z = cruise_height
         nav_teb = True
     elif current_step == 15:
+        timer_cnt = 3.0
         pose.pose.position.x = e1x
         pose.pose.position.y = e1y
         pose.pose.position.z = -0.2
         local_pos_pub.publish(pose)
         nav_teb = False
+    elif current_step == 16:
+        timer_cnt = timer_cnt - 0.05
+    elif current_step == 17:
+        arm_cmd = CommandBoolRequest()
+        arm_cmd.value = False
+        if (arming_client.call(arm_cmd).success == True):
+            rospy.loginfo("Vehicle armed")
 
 
 

@@ -29,10 +29,16 @@ int main(int argc, char **argv)
     rs2::align align_to_color(RS2_STREAM_COLOR);
     tf2_ros::TransformListener tfListener(tfBuffer);
     tf2_ros::TransformBroadcaster br;
-    // ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("image_topic", 1);
-
+    ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("image_topic", 1);
+    nh.setParam("/detect/id", 10);
+    nh.setParam("/detect/x", 0.0);
+    nh.setParam("/detect/y", 0.0);
+    nh.setParam("/target/x", 0.0);
+    nh.setParam("/target/y", 0.0);
+    int frame_idle = 10;
     while (ros::ok())
     {
+        
         rs2::frameset frameset = pipe.wait_for_frames();
         auto aligned_frameset = align_to_color.process(frameset); // 实际进行流对齐
 
@@ -43,20 +49,21 @@ int main(int argc, char **argv)
         const auto depth_intrinsics = depth_stream_profile.get_intrinsics(); // 获取对齐后的深度内参
         cv::Mat color_image(cv::Size(640, 480), CV_8UC3, (void *)color_stream.get_data(), cv::Mat::AUTO_STEP);
         sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", color_image).toImageMsg();
-        image_pub.publish(msg);
-        int xmin = detected_objects[i].rect.x;
-        int ymin = detected_objects[i].rect.y;
-        int width = detected_objects[i].rect.width;
-        int height = detected_objects[i].rect.height;
-        Rect rect1(xmin, ymin, width, height); // 左上坐标（x,y）和矩形的长(x)宽(y)
-        // std::cout << detected_objects[i].class_id << ' ' << detected_objects[i].prob << std::endl;
-        cv::rectangle(osrc, rect1, Scalar(0, 0, 255), 1, LINE_8, 0);
-
+        frame_idle = frame_idle - 1;
+        if(frame_idle <= 0 ){
+            image_pub.publish(msg);
+            frame_idle = 10;
+        }
         float pixe_center[2], point_in_color_coordinates[3];
-        pixe_center[0] = xmin + 0.5 * width;
-        pixe_center[1] = (ymin + 0.5 * height) * 0.75;
-        Rect rect2(pixe_center[0], pixe_center[1], 3, 3); // 左上坐标（x,y）和矩形的长(x)宽(y)
-        cv::rectangle(color_image, rect2, Scalar(0, 0, 255), 1, LINE_8, 0);
+        int class_id = nh.param("/detect/id", 10);
+        pixe_center[0] = nh.param("/detect/x", 0.0);
+        pixe_center[1] = nh.param("/detect/y", 0.0);
+        if (class_id == 10)
+        {
+            continue;
+        }
+        cv::Rect rect2(pixe_center[0], pixe_center[1], 3, 3); // 左上坐标（x,y）和矩形的长(x)宽(y)
+        cv::rectangle(color_image, rect2, cv::Scalar(0, 0, 255), 1, cv::LINE_8, 0);
         float pixed_center_depth_value = aligned_depth_stream.get_distance(pixe_center[0], pixe_center[1]);
         rs2_deproject_pixel_to_point(point_in_color_coordinates, &depth_intrinsics, pixe_center, pixed_center_depth_value);
         geometry_msgs::TransformStamped trans;
@@ -83,12 +90,14 @@ int main(int argc, char **argv)
             ROS_WARN("Target Get TF ERROR!");
         }
         std::cout
-            << "ID:" << detected_objects[i].class_id
+            << "ID:" << class_id
             << " X：" << base2map.transform.translation.x
             << " Y：" << base2map.transform.translation.y
             << std::endl;
         cv::imshow("Image", color_image);
         cv::waitKey(1);
+        nh.setParam("/target/x", base2map.transform.translation.x);
+        nh.setParam("/target/y", base2map.transform.translation.y);
     }
     return 0;
 }
