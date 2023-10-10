@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -8,8 +10,8 @@
 #include <librealsense2/rsutil.h>
 #include <iostream>
 #include "detector.h"
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/image_transport.h>
+// #include <cv_bridge/cv_bridge.h>
+// #include <image_transport/image_transport.h>
 
 tf2_ros::Buffer tfBuffer;
 
@@ -33,7 +35,7 @@ int main(int argc, char **argv)
     rs2::align align_to_color(RS2_STREAM_COLOR);
     tf2_ros::TransformListener tfListener(tfBuffer);
     tf2_ros::TransformBroadcaster br;
-    ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("image_topic", 1);
+    // ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("image_topic", 1);
 
     while (ros::ok())
     {
@@ -46,8 +48,8 @@ int main(int argc, char **argv)
         rs2::video_stream_profile depth_stream_profile = aligned_depth_stream.get_profile().as<rs2::video_stream_profile>();
         const auto depth_intrinsics = depth_stream_profile.get_intrinsics(); // 获取对齐后的深度内参
         cv::Mat color_image(cv::Size(640, 480), CV_8UC3, (void *)color_stream.get_data(), cv::Mat::AUTO_STEP);
-        sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", color_image).toImageMsg();
-        image_pub.publish(msg);
+        // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", color_image).toImageMsg();
+        // image_pub.publish(msg);
         cv::Mat osrc = color_image.clone();
         resize(osrc, osrc, Size(640, 640));
         vector<Detector::Object> detected_objects;
@@ -70,22 +72,32 @@ int main(int argc, char **argv)
             float pixed_center_depth_value = aligned_depth_stream.get_distance(pixe_center[0], pixe_center[1]);
             rs2_deproject_pixel_to_point(point_in_color_coordinates, &depth_intrinsics, pixe_center, pixed_center_depth_value);
             geometry_msgs::TransformStamped trans;
+            tf2::Quaternion q;
+            q.setRPY(0, 0, 0);
             trans.child_frame_id = "target";
             trans.header.stamp = ros::Time::now();
             trans.header.frame_id = "d435";
-            trans.transform.rotation.x = 0.01;
-            trans.transform.rotation.y = 0.01;
-            trans.transform.rotation.z = 0.01;
-            trans.transform.rotation.w = 0.01;
-            trans.transform.translation.z = point_in_color_coordinates[2];
-            trans.transform.translation.z = -point_in_color_coordinates[0];
+            trans.transform.rotation.x = q.x();
+            trans.transform.rotation.y = q.y();
+            trans.transform.rotation.z = q.z();
+            trans.transform.rotation.w = q.w();
+            trans.transform.translation.x = point_in_color_coordinates[2];
+            trans.transform.translation.y = -point_in_color_coordinates[0];
             trans.transform.translation.z = -point_in_color_coordinates[1];
             br.sendTransform(trans);
+            geometry_msgs::TransformStamped base2map;
+            try
+            {
+                base2map = tfBuffer.lookupTransform("map", "target", ros::Time(0));
+            }
+            catch (tf2::TransformException &ex)
+            {
+                ROS_WARN("Target Get TF ERROR!");
+            }
             std::cout
                 << "ID:" << detected_objects[i].class_id
-                << " X：" << point_in_color_coordinates[0]
-                << " Y：" << point_in_color_coordinates[1]
-                << " Z：" << point_in_color_coordinates[2]
+                << " X：" << base2map.transform.translation.x
+                << " Y：" << base2map.transform.translation.y
                 << std::endl;
             // 像素坐标系转换到相机坐标系
         }

@@ -13,23 +13,25 @@ include_directories(
     /opt/intel/openvino_2021/deployment_tools/inference_engine/include/
     /opt/intel/openvino_2021/deployment_tools/ngraph/include/
 )
-set(ngraph_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/ngraph/cmake")
-set(InferenceEngine_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/share/")
+
+# set(ngraph_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/ngraph/cmake")
+# set(InferenceEngine_DIR "/opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/share/")
 
 find_package(
   catkin REQUIRED COMPONENTS
   roscpp
-  image_transport
-  sensor_msgs
-  cv_bridge
-  std_msgs
+  OpenCV
+  # image_transport
+  # sensor_msgs
+  # cv_bridge
+  # std_msgs
   tf2
   tf2_ros
 )
 
 #set(InferenceEngine_DIR "./deployment_tools/inference_engine/share/cmake")
 find_package(InferenceEngine REQUIRED)
-find_package(OpenCV 4 REQUIRED)
+
 #set(ngraph_DIR "./deployment_tools/ngraph")
 find_package(ngraph REQUIRED)
 #set(ngraph_INCLUDE_DIRS "./deployment_tools/ngraph/include/")
