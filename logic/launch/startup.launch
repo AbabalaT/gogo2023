@@ -5,6 +5,7 @@
     <include file="$(find logic)/launch/mav_ros.launch"/>
     <include file="$(find logic)/launch/logic.launch"/>
     <include file="$(find vision)/launch/vision.launch"/>
+    <include file="$(find yolov5_ros)/launch/yolov5.launch"/>
     <include file="$(find project2plane)/launch/projection.launch"/>
     <include file="$(find localize_startup)/launch/static_tf.launch"/>
     <include file="$(find pcl2process)/launch/pcl2pro.launch"/>

@@ -26,22 +26,24 @@ servo_position = 0
 timer_cnt = 3.0
 eject_height = 0.25
 
-cruise_height = 1.5
+# 把飞机拿到穿门高度，看终端高度，填到下面
+cruise_height = 1.2
+# 往前 X+
+# 往左 Y+
+p1x = 1.5
+p1y = 0.5
 
-p1x = 1
-p1y = 1
-
-p2x = 2
+p2x = 1
 p2y = -1
 
-p3x = 0
-p3y = 1
+p3x = 2.5
+p3y = -0.5
 
-f1x = 2.5
-f1y = -1
+f1x = 2
+f1y = -0.5
 
 e1x = 0
-e1y = -1
+e1y = 0
 
 
 def tf_get_timer_callback(event):  # 位置获取
@@ -187,19 +189,20 @@ def mission_act_callback(event):
         pose.pose.position.y = p1y
         pose.pose.position.z = cruise_height
         nav_teb = True
-        timer_cnt = 3.0
+        timer_cnt = 5.0
     elif current_step == 21:
         timer_cnt = timer_cnt - 0.05
         if rospy.get_param('/detect/id') != 10:
             pre_x = rospy.get_param('/target/x')
             pre_y = rospy.get_param('/target/y')
-        if abs(current_x - pre_x) < 1.5:
-            if abs(current_y - pre_y) < 1.5:
-                p1x = pre_x
-                p1y = pre_y
+            if abs(current_x - pre_x) < 1.5:
+                if abs(current_y - pre_y) < 1.5:
+                    p1x = pre_x
+                    p1y = pre_y
         pose.pose.position.x = p1x
         pose.pose.position.y = p1y
         pose.pose.position.z = cruise_height
+        local_pos_pub.publish(pose)
         nav_teb = False
     elif current_step == 4:
         timer_cnt = 3.0
@@ -216,7 +219,7 @@ def mission_act_callback(event):
         pose.pose.position.z = eject_height
         local_pos_pub.publish(pose)
     elif current_step == 6:
-        timer_cnt = 3.0
+        timer_cnt = 5.0
         pose.pose.position.x = p2x
         pose.pose.position.y = p2y
         pose.pose.position.z = cruise_height
@@ -226,13 +229,14 @@ def mission_act_callback(event):
         if rospy.get_param('/detect/id') != 10:
             pre_x = rospy.get_param('/target/x')
             pre_y = rospy.get_param('/target/y')
-        if abs(current_x - pre_x) < 1.5:
-            if abs(current_y - pre_y) < 1.5:
-                p2x = pre_x
-                p2y = pre_y
+            if abs(current_x - pre_x) < 1.5:
+                if abs(current_y - pre_y) < 1.5:
+                    p2x = pre_x
+                    p2y = pre_y
         pose.pose.position.x = p2x
         pose.pose.position.y = p2y
         pose.pose.position.z = cruise_height
+        local_pos_pub.publish(pose)
         nav_teb = False
     elif current_step == 7:
         timer_cnt = 3.0
@@ -249,7 +253,8 @@ def mission_act_callback(event):
         pose.pose.position.z = eject_height
         local_pos_pub.publish(pose)
     elif current_step == 9:
-        timer_cnt = 3.0
+        rospy.set_param('/mission/servo_pos', 1)
+        timer_cnt = 5.0
         pose.pose.position.x = p3x
         pose.pose.position.y = p3y
         pose.pose.position.z = cruise_height
@@ -259,13 +264,14 @@ def mission_act_callback(event):
         if rospy.get_param('/detect/id') != 10:
             pre_x = rospy.get_param('/target/x')
             pre_y = rospy.get_param('/target/y')
-        if abs(current_x - pre_x) < 1.5:
-            if abs(current_y - pre_y) < 1.5:
-                p3x = pre_x
-                p3y = pre_y
+            if abs(current_x - pre_x) < 1.5:
+                if abs(current_y - pre_y) < 1.5:
+                    p3x = pre_x
+                    p3y = pre_y
         pose.pose.position.x = p3x
         pose.pose.position.y = p3y
         pose.pose.position.z = cruise_height
+        local_pos_pub.publish(pose)
         nav_teb = False
     elif current_step == 10:
         timer_cnt = 3.0
@@ -286,6 +292,7 @@ def mission_act_callback(event):
         pose.pose.position.x = f1x
         pose.pose.position.y = f1y
         pose.pose.position.z = cruise_height
+        rospy.set_param('/mission/servo_pos', 1)
         nav_teb = True
     elif current_step == 13:
         pose.pose.position.x = f1x
@@ -299,7 +306,7 @@ def mission_act_callback(event):
         pose.pose.position.z = cruise_height
         nav_teb = True
     elif current_step == 15:
-        timer_cnt = 3.0
+        timer_cnt = 5.0
         pose.pose.position.x = e1x
         pose.pose.position.y = e1y
         pose.pose.position.z = -0.2
@@ -307,7 +314,9 @@ def mission_act_callback(event):
         nav_teb = False
     elif current_step == 16:
         timer_cnt = timer_cnt - 0.05
+        local_pos_pub.publish(pose)
     elif current_step == 17:
+        local_pos_pub.publish(pose)
         arm_cmd = CommandBoolRequest()
         arm_cmd.value = False
         if (arming_client.call(arm_cmd).success == True):

@@ -96,7 +96,7 @@ int main(int argc, char **argv)
             << std::endl;
         cv::imshow("Image", color_image);
         cv::waitKey(1);
-        nh.setParam("/target/x", base2map.transform.translation.x);
+        nh.setParam("/target/x", base2map.transform.translation.x - 0.05);
         nh.setParam("/target/y", base2map.transform.translation.y);
     }
     return 0;
