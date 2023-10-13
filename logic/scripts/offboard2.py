@@ -18,6 +18,9 @@ current_y = 0
 current_z = 0
 current_yaw = 0
 timer_cnt = 3.0
+teb_dog = 0.6
+
+teb_frame = Twist()
 
 
 hit_moving_target = False
@@ -28,6 +31,9 @@ p3_height = 1.8
 # 把飞机拿到穿门高度，看终端高度，填到下面
 cruise_height = 0.6
 passing_height = 0.6
+
+m1x = 1
+m1y = 1
 
 # 往前 X+
 # 往左 Y+
@@ -46,7 +52,7 @@ f1y = 0
 e1x = 0
 e1y = 0
 
-
+H_height = 1.5
 def tf_get_timer_callback(event):  # 位置获取
     try:
         global trans, rot, current_x, current_y, current_z, current_yaw
@@ -75,7 +81,10 @@ def rc_cmd_callback(msg):
 
 
 def cmd_vel_republish(msg):
+    global teb_frame, teb_dog
     if nav_teb:
+        teb_dog = 0.6
+        teb_frame = msg
         msg.linear.z = p_height * (cruise_height - current_z)
         msg.angular.z = p_yaw * (0 - current_yaw)
         set_vel_pub.publish(msg)
@@ -85,6 +94,21 @@ def teb_pos_publish(event):
     if nav_teb:
         teb_target_pub.publish(pose)
         # pass
+
+
+def teb_dog_callback(event):
+    global teb_dog, teb_frame
+    if nav_teb:
+        teb_dog = teb_dog - 0.05
+    else:
+        teb_dog = 0.6
+
+    if teb_dog < 0.0:
+        teb_frame.linear.x = 0.0
+        teb_frame.linear.y = 0.0
+        teb_frame.linear.z = p_height * (cruise_height - current_z)
+        teb_frame.angular.z = p_yaw * (0 - current_yaw)
+        set_vel_pub.publish(teb_frame)
 
 
 def state_cb(msg):
@@ -106,7 +130,11 @@ def mission_step_callback(event):
             current_step = 2
     elif current_step == 2:
         if current_z > cruise_height - 0.15:
-            current_step = 3
+            current_step = 31
+    elif current_step == 31:
+        if abs(current_x - m1x) < 0.25:
+            if abs(current_y - m1y) < 0.25:
+                current_step = 3
     elif current_step == 3:
         if abs(current_x - p1x) < 0.25:
             if abs(current_y - p1y) < 0.25:
@@ -182,7 +210,7 @@ def mission_step_callback(event):
 
 
 def mission_act_callback(event):
-    global pose, nav_teb, timer_cnt, servo_position
+    global pose, nav_teb, timer_cnt, servo_position, eject_height
     global p1x, p1y, p2x, p2y, p3x, p3y, f1x, f1y, e1x, e1y
     global current_step
     if current_step == 0:
@@ -204,6 +232,12 @@ def mission_act_callback(event):
         pose.pose.position.z = cruise_height
         local_pos_pub.publish(pose)
         nav_teb = False
+    elif current_step == 31:
+        pose.pose.position.x = m1x
+        pose.pose.position.y = m1y
+        pose.pose.position.z = cruise_height
+        nav_teb = True
+        timer_cnt = 5.0
     elif current_step == 3:
         pose.pose.position.x = p1x
         pose.pose.position.y = p1y
@@ -285,6 +319,7 @@ def mission_act_callback(event):
         timer_cnt = timer_cnt - 0.05
         if hit_moving_target:
             rospy.set_param("/mission/target", "tank")
+            eject_height = 0.8
         else:
             rospy.set_param("/mission/target", "pillbox")
         if rospy.get_param("/detect/id") != 10:
@@ -319,6 +354,13 @@ def mission_act_callback(event):
         nav_teb = False
     elif current_step == 11:
         timer_cnt = timer_cnt - 0.05
+        if rospy.get_param("/detect/id") != 10:
+            pre_x = rospy.get_param("/target/x")
+            pre_y = rospy.get_param("/target/y")
+            if abs(current_x - pre_x) < 1.5:
+                if abs(current_y - pre_y) < 1.5:
+                    p3x = pre_x
+                    p3y = pre_y
         rospy.set_param("/mission/servo_pos", 3)
         pose.pose.position.x = p3x
         pose.pose.position.y = p3y
@@ -356,7 +398,7 @@ def mission_act_callback(event):
                     e1y = pre_y
         pose.pose.position.x = e1x
         pose.pose.position.y = e1y
-        pose.pose.position.z = passing_height
+        pose.pose.position.z = H_height
         local_pos_pub.publish(pose)
         nav_teb = False
     elif current_step == 15:
@@ -374,7 +416,7 @@ def mission_act_callback(event):
         arm_cmd = CommandBoolRequest()
         arm_cmd.value = False
         if arming_client.call(arm_cmd).success == True:
-            rospy.loginfo("Vehicle armed")
+            rospy.loginfo("Vehicle disarmed")
 
 
 if __name__ == "__main__":
@@ -435,6 +477,7 @@ if __name__ == "__main__":
     timer_02 = rospy.Timer(rospy.Duration(0.05), mission_act_callback)
     timer_03 = rospy.Timer(rospy.Duration(1.0), teb_pos_publish)
     timer_04 = rospy.Timer(rospy.Duration(0.1), tf_get_timer_callback)
+    timer_05 = rospy.Timer(rospy.Duration(0.1), teb_dog_callback)
     rospy.spin()
     # offb_set_mode = SetModeRequest()
     # offb_set_mode.custom_mode = 'OFFBOARD'
