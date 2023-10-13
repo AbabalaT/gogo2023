@@ -97,7 +97,7 @@ int main(int argc, char **argv)
         cv::imshow("Image", color_image);
         cv::waitKey(1);
         nh.setParam("/target/x", base2map.transform.translation.x - 0.15);
-        nh.setParam("/target/y", base2map.transform.translation.y);
+        nh.setParam("/target/y", base2map.transform.translation.y + 0.05);
     }
     return 0;
 }

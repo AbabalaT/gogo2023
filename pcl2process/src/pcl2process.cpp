@@ -21,61 +21,86 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-//#include <pcl/features/normal_3d.h>
-//#include <pcl/kdtree/kdtree_flann.h>
+// #include <pcl/features/normal_3d.h>
+// #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/surface/mls.h>
 
 tf2_ros::Buffer tfBuffer;
 ros::Publisher pcl_publisher;
 
-inline float float_abs(float x) {
-    if (x > 0) {
+inline float float_abs(float x)
+{
+    if (x > 0)
+    {
         return x;
-    } else {
+    }
+    else
+    {
         return -x;
     }
 }
 
-struct PointInt {
+struct PointInt
+{
     int p_x, p_y, p_z;
 };
 
 float current_x = 0.0, current_y = 0.0, current_z = 0.0;
 
-void getcloud_air(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法向量法投影转平面
+void getcloud_air(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
+{ // 法向量法投影转平面
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl2cloud(new pcl::PointCloud<pcl::PointXYZ>);
     sensor_msgs::PointCloud2 ROSPCL_output;
     pcl::fromROSMsg(*laserCloudMsg, *pcl2cloud);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl2cloud_out(new pcl::PointCloud<pcl::PointXYZ>);
 
     geometry_msgs::TransformStamped base2map;
-    try {
+    try
+    {
         base2map = tfBuffer.lookupTransform("camera_init", "aft_mapped", ros::Time(0));
-
-    } catch (tf2::TransformException &ex) {
+    }
+    catch (tf2::TransformException &ex)
+    {
         ROS_WARN("Pcl2process Get TF ERROR!");
         return;
     }
     current_x = base2map.transform.translation.x;
     current_y = base2map.transform.translation.y;
     current_z = base2map.transform.translation.z;
-    if((pcl2cloud->points.size()) == 0){
+    tf2::Quaternion quaternion(
+        base2map.transform.rotation.x,
+        base2map.transform.rotation.y,
+        base2map.transform.rotation.z,
+        base2map.transform.rotation.w);
+    tf2::Matrix3x3 matrix(quaternion);
+    double current_roll, current_pitch, current_yaw;
+    matrix.getRPY(current_roll, current_pitch, current_yaw);
+    Eigen::Affine3f transform_p = Eigen::Affine3f::Identity();
+    Eigen::Quaterniond q1 = Eigen::Quaterniond(base2map.transform.rotation.x, base2map.transform.rotation.y,
+        base2map.transform.rotation.z, base2map.transform.rotation.w).normalized();
+    transform_p.translation() << current_x, current_y, current_z;
+    // transform_p.rotate(q1);
+    if ((pcl2cloud->points.size()) == 0)
+    {
         return;
     }
-    else{
+    else
+    {
         long point_num = 0;
-        for (long i = 0; i <= pcl2cloud->points.size(); i = i + 1) {
-            if(pcl2cloud->points[i].x - current_x < 0.25 and pcl2cloud->points[i].x - current_x > -0.25
-                and pcl2cloud->points[i].y - current_y < 0.25 and pcl2cloud->points[i].y - current_y > -0.25){
+        for (long i = 0; i <= pcl2cloud->points.size(); i = i + 1)
+        {
+            if (pcl2cloud->points[i].x - current_x < 0.25 and pcl2cloud->points[i].x - current_x > -0.25 and pcl2cloud->points[i].y - current_y < 0.25 and pcl2cloud->points[i].y - current_y > -0.25)
+            {
                 continue;
             }
-            if(pcl2cloud->points[i].z  - current_z < 0.2 and pcl2cloud->points[i].z  - current_z > -0.5){
+            if (pcl2cloud->points[i].z - current_z < 0.2 and pcl2cloud->points[i].z - current_z > -0.5)
+            {
                 pcl2cloud->points[i].z = 0;
                 pcl2cloud_out->points.push_back(pcl2cloud->points[i]);
                 point_num = point_num + 1;
             }
         }
-        
+
         pcl2cloud_out->width = point_num;
         pcl2cloud_out->height = 1;
         pcl2cloud_out->points.resize(pcl2cloud_out->width * pcl2cloud_out->height);
@@ -85,27 +110,32 @@ void getcloud_air(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
     }
 }
 
-void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法向量法投影转平面
+void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
+{ // 法向量法投影转平面
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl2cloud(new pcl::PointCloud<pcl::PointXYZ>);
     sensor_msgs::PointCloud2 ROSPCL_output;
     pcl::fromROSMsg(*laserCloudMsg, *pcl2cloud);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl2cloud_out(new pcl::PointCloud<pcl::PointXYZ>);
 
     geometry_msgs::TransformStamped base2map;
-    try {
+    try
+    {
         base2map = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
-
-    } catch (tf2::TransformException &ex) {
+    }
+    catch (tf2::TransformException &ex)
+    {
         ROS_WARN("Pcl2process Get TF ERROR!");
         return;
     }
     current_x = base2map.transform.translation.x;
     current_y = base2map.transform.translation.y;
 
-    if((pcl2cloud->points.size()) == 0){
+    if ((pcl2cloud->points.size()) == 0)
+    {
         return;
     }
-    else{
+    else
+    {
         pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
         pcl::VoxelGrid<pcl::PointXYZ> filter;
         filter.setInputCloud(pcl2cloud);
@@ -114,19 +144,23 @@ void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
         ne.setInputCloud(pcl2cloud);
         pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
         ne.setSearchMethod(tree);
-        //存储输出数据
+        // 存储输出数据
         pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
-        //ne.setRadiusSearch(0.03); //使用半径在查询点周围3厘米范围内的所有临近元素
-        ne.setKSearch(10); //使用最近的10个点
+        // ne.setRadiusSearch(0.03); //使用半径在查询点周围3厘米范围内的所有临近元素
+        ne.setKSearch(10); // 使用最近的10个点
         ne.compute(*cloud_normals);
         long point_num = 0;
-        for (long i = 0; i <= pcl2cloud->points.size(); i = i + 1) {
+        for (long i = 0; i <= pcl2cloud->points.size(); i = i + 1)
+        {
             float gradient = (pow(cloud_normals->points[i].normal_x, 2) + pow(cloud_normals->points[i].normal_y, 2)) / pow(cloud_normals->points[i].normal_z, 2);
-            if(gradient > 1.0f){
-                if(pcl2cloud->points[i].y > 6.6 or pcl2cloud->points[i].y < -6.6){
+            if (gradient > 1.0f)
+            {
+                if (pcl2cloud->points[i].y > 6.6 or pcl2cloud->points[i].y < -6.6)
+                {
                     continue;
                 }
-                if(pow(pcl2cloud->points[i].x - current_x, 2) + pow(pcl2cloud->points[i].y - current_y, 2) > 0.09){
+                if (pow(pcl2cloud->points[i].x - current_x, 2) + pow(pcl2cloud->points[i].y - current_y, 2) > 0.09)
+                {
                     pcl2cloud->points[i].z = 0;
                     pcl2cloud_out->points.push_back(pcl2cloud->points[i]);
                     point_num = point_num + 1;
@@ -135,7 +169,8 @@ void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
         }
 
         pcl::PointXYZ point4push;
-        for (float x = -7.00; x < 22.0; x = x + 0.05) {
+        for (float x = -7.00; x < 22.0; x = x + 0.05)
+        {
             point4push.x = x;
             point4push.y = -7.85f;
             point4push.z = 0.2f;
@@ -144,7 +179,8 @@ void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
             pcl2cloud_out->points.push_back(point4push);
             point_num = point_num + 2;
         }
-        for (float y = -7.85; y < 7.85; y = y + 0.05) {
+        for (float y = -7.85; y < 7.85; y = y + 0.05)
+        {
             point4push.x = -7.00f;
             point4push.y = y;
             point4push.z = 0.2f;
@@ -163,14 +199,17 @@ void getcloud_vec(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//法�
     }
 }
 
-void getcloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//使用体素+梯度法进行点云分割
+void getcloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
+{ // 使用体素+梯度法进行点云分割
     std::vector<std::vector<int>> point_list1(2800);
     std::vector<PointInt> point_list2;
     geometry_msgs::TransformStamped base2map;
-    try {
+    try
+    {
         base2map = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
-
-    } catch (tf2::TransformException &ex) {
+    }
+    catch (tf2::TransformException &ex)
+    {
         ROS_WARN("Pcl2process Get TF ERROR!");
         return;
     }
@@ -185,15 +224,23 @@ void getcloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//使用�
     unsigned int point_num = 0;
     cv::Mat hight_map(2801, 2801, CV_8UC1, cv::Scalar(0));
     cv::Mat gradient_map(2801, 2801, CV_8UC1, cv::Scalar(0));
-    for (auto point: (pcl2cloud->points)) {
+    for (auto point : (pcl2cloud->points))
+    {
         point.z = point.z + 0.52;
-        if (point.x < 22.4) {   //判断该点是否属于车身
-            if (point.x > -5.4) {
-                if (point.y < 13.8) {
-                    if (point.y > -13.8) {
-                        if (point.z > -1.2) {
-                            if (point.z < 1.2) {
-                                if (pow((current_x - point.x), 2) + pow((current_y - point.y), 2) < 0.067) {
+        if (point.x < 22.4)
+        { // 判断该点是否属于车身
+            if (point.x > -5.4)
+            {
+                if (point.y < 13.8)
+                {
+                    if (point.y > -13.8)
+                    {
+                        if (point.z > -1.2)
+                        {
+                            if (point.z < 1.2)
+                            {
+                                if (pow((current_x - point.x), 2) + pow((current_y - point.y), 2) < 0.067)
+                                {
                                     continue;
                                 }
                                 /*
@@ -215,136 +262,162 @@ void getcloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg) {//使用�
                                 int px = 100 * point.x + 550;
                                 int py = 100 * point.y + 1400;
                                 unsigned char pz = 100 * point.z + 130;
-                                if (!(hight_map.at<uchar>(px, py))) {
+                                if (!(hight_map.at<uchar>(px, py)))
+                                {
                                     hight_map.at<uchar>(px, py) = pz;
                                     point_list1[px].push_back(py);
                                     point_list2.push_back({px, py, pz});
-                                } else {
-                                    if (pz > hight_map.at<uchar>(px, py)) {
+                                }
+                                else
+                                {
+                                    if (pz > hight_map.at<uchar>(px, py))
+                                    {
                                         hight_map.at<uchar>(px, py) = pz;
                                         point_list1[px].push_back(py);
                                         point_list2.push_back({px, py, pz});
                                     }
                                 }
                             }
-                            //continue;
+                            // continue;
                         }
                     }
                 }
             }
         }
-        //pcl2cloud_out->points.push_back(point);
+        // pcl2cloud_out->points.push_back(point);
     }
 
-    for (auto point: point_list2) {
+    for (auto point : point_list2)
+    {
         unsigned char max = 0;
         unsigned char min = 255;
-        if (point.p_x < 1435) {
-            if (point.p_x > 1365) {
-                if (point.p_y < 1435) {
-                    if (point.p_y > 1365) {
+        if (point.p_x < 1435)
+        {
+            if (point.p_x > 1365)
+            {
+                if (point.p_y < 1435)
+                {
+                    if (point.p_y > 1365)
+                    {
                         continue;
                     }
                 }
             }
         }
         int surround_point_x = 0;
-        for (surround_point_x = ((point.p_x - 10) > 0 ? (point.p_x - 10) : 0);//在附近20*20cm范围内搜索高度差异最大的点
+        for (surround_point_x = ((point.p_x - 10) > 0 ? (point.p_x - 10) : 0); // 在附近20*20cm范围内搜索高度差异最大的点
              surround_point_x < ((point.p_x + 10) < 2799 ? (point.p_x + 10) : 2799);
-             surround_point_x = surround_point_x + 1) {
-            for (auto surround_point_y: point_list1[surround_point_x]) {
-                if ((surround_point_y < point.p_y + 10) and (surround_point_y > point.p_y - 10)) {
-                    if (hight_map.at<uchar>(surround_point_x, surround_point_y) < min) {
+             surround_point_x = surround_point_x + 1)
+        {
+            for (auto surround_point_y : point_list1[surround_point_x])
+            {
+                if ((surround_point_y < point.p_y + 10) and (surround_point_y > point.p_y - 10))
+                {
+                    if (hight_map.at<uchar>(surround_point_x, surround_point_y) < min)
+                    {
                         min = hight_map.at<uchar>(surround_point_x, surround_point_y);
                     }
-                    if (hight_map.at<uchar>(surround_point_x, surround_point_y) > max) {
+                    if (hight_map.at<uchar>(surround_point_x, surround_point_y) > max)
+                    {
                         max = hight_map.at<uchar>(surround_point_x, surround_point_y);
                     }
                 }
-                if (surround_point_y > point.p_y + 10) {
+                if (surround_point_y > point.p_y + 10)
+                {
                     break;
                 }
             }
         }
         unsigned char point_gradient = max - min;
         gradient_map.at<uchar>(point.p_x, point.p_y) = point_gradient;
-        if (point_gradient > 14) {
+        if (point_gradient > 14)
+        {
             pcl::PointXYZ point4push;
-            point4push.x = (float) (point.p_x - 550) / 100;
-            point4push.y = (float) (point.p_y - 1400) / 100;
+            point4push.x = (float)(point.p_x - 550) / 100;
+            point4push.y = (float)(point.p_y - 1400) / 100;
             point4push.z = 0.15f;
             pcl2cloud_out->points.push_back(point4push);
             point_num = point_num + 1;
-        } else {
+        }
+        else
+        {
             unsigned char max_5cm = 0;
             unsigned char min_5cm = 255;
             int surround_point_x = 0;
             for (surround_point_x = ((point.p_x - 5) > 0 ? (point.p_x - 5) : 0);
                  surround_point_x < ((point.p_x + 5) < 2799 ? (point.p_x + 5) : 2799);
-                 surround_point_x = surround_point_x + 1) {
-                for (auto surround_point_y: point_list1[surround_point_x]) {
-                    if ((surround_point_y < point.p_y + 5) and (surround_point_y > point.p_y - 5)) {
-                        if (hight_map.at<uchar>(surround_point_x, surround_point_y) < min) {
+                 surround_point_x = surround_point_x + 1)
+            {
+                for (auto surround_point_y : point_list1[surround_point_x])
+                {
+                    if ((surround_point_y < point.p_y + 5) and (surround_point_y > point.p_y - 5))
+                    {
+                        if (hight_map.at<uchar>(surround_point_x, surround_point_y) < min)
+                        {
                             min_5cm = hight_map.at<uchar>(surround_point_x, surround_point_y);
                         }
-                        if (hight_map.at<uchar>(surround_point_x, surround_point_y) > max) {
+                        if (hight_map.at<uchar>(surround_point_x, surround_point_y) > max)
+                        {
                             max_5cm = hight_map.at<uchar>(surround_point_x, surround_point_y);
                         }
                     }
-                    if (surround_point_y > point.p_y + 5) {
+                    if (surround_point_y > point.p_y + 5)
+                    {
                         break;
                     }
                 }
             }
             unsigned char point_gradient_5cm = max_5cm - min_5cm;
-            //gradient_map.at<uchar>(point.p_x, point.p_y) = point_gradient;
-            if (point_gradient > 10) {
+            // gradient_map.at<uchar>(point.p_x, point.p_y) = point_gradient;
+            if (point_gradient > 10)
+            {
                 pcl::PointXYZ point4push;
-                point4push.x = (float) (point.p_x - 550) / 100;
-                point4push.y = (float) (point.p_y - 1400) / 100;
+                point4push.x = (float)(point.p_x - 550) / 100;
+                point4push.y = (float)(point.p_y - 1400) / 100;
                 point4push.z = 0.12f;
                 pcl2cloud_out->points.push_back(point4push);
                 point_num = point_num + 1;
             }
         }
     }
-//    pcl::PointXYZ point4push;
-//    for (float x = -5.88; x < 21.8; x = x + 0.05) {
-//        point4push.x = x;
-//        point4push.y = -7.51f;
-//        point4push.z = 0.2f;
-//        pcl2cloud_out->points.push_back(point4push);
-//        point4push.y = 7.24f;
-//        pcl2cloud_out->points.push_back(point4push);
-//        point_num = point_num + 2;
-//    }
-//    for (float y = -7.51; y < 7.24; y = y + 0.05) {
-//        point4push.x = -5.88f;
-//        point4push.y = y;
-//        point4push.z = 0.2f;
-//        pcl2cloud_out->points.push_back(point4push);
-//        point4push.x = 21.8f;
-//        pcl2cloud_out->points.push_back(point4push);
-//        point_num = point_num + 2;
-//    }
+    //    pcl::PointXYZ point4push;
+    //    for (float x = -5.88; x < 21.8; x = x + 0.05) {
+    //        point4push.x = x;
+    //        point4push.y = -7.51f;
+    //        point4push.z = 0.2f;
+    //        pcl2cloud_out->points.push_back(point4push);
+    //        point4push.y = 7.24f;
+    //        pcl2cloud_out->points.push_back(point4push);
+    //        point_num = point_num + 2;
+    //    }
+    //    for (float y = -7.51; y < 7.24; y = y + 0.05) {
+    //        point4push.x = -5.88f;
+    //        point4push.y = y;
+    //        point4push.z = 0.2f;
+    //        pcl2cloud_out->points.push_back(point4push);
+    //        point4push.x = 21.8f;
+    //        pcl2cloud_out->points.push_back(point4push);
+    //        point_num = point_num + 2;
+    //    }
     pcl2cloud_out->width = point_num;
     pcl2cloud_out->height = 1;
     pcl2cloud_out->points.resize(pcl2cloud_out->width * pcl2cloud_out->height);
     cv::threshold(gradient_map, gradient_map, 10, 255, cv::THRESH_BINARY);
     pcl::VoxelGrid<pcl::PointXYZ> filter;
     filter.setInputCloud(pcl2cloud_out);
-    filter.setLeafSize(0.03f, 0.03f, 0.01f);//体素下采样
+    filter.setLeafSize(0.03f, 0.03f, 0.01f); // 体素下采样
     filter.filter(*pcl2cloud_out);
 
     pcl::toROSMsg(*pcl2cloud_out, ROSPCL_output);
-//    cv::imshow("gradient_map", hight_map);
-//    cv::waitKey(1);
+    //    cv::imshow("gradient_map", hight_map);
+    //    cv::waitKey(1);
     ROSPCL_output.header.frame_id = "map";
     pcl_publisher.publish(ROSPCL_output);
-    //ROS_INFO("%d",pcl2cloud->points.size());
+    // ROS_INFO("%d",pcl2cloud->points.size());
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     ros::init(argc, argv, "pointcloud_process");
     ros::NodeHandle pnh("~");
     tf2_ros::TransformListener tfListener(tfBuffer);
@@ -352,8 +425,8 @@ int main(int argc, char **argv) {
     pcl_publisher = pnh.advertise<sensor_msgs::PointCloud2>("/pointcloud2_out", 1);
     ros::spin();
     return 0;
-    //auto sub1 = pnh.subscribe("/pointcloud2_in", 100, laserCallback);
-    //auto sub2 = pnh.subscribe("/depth_image", 100, depth_img_callback);
-    //pub = pnh.advertise<sensor_msgs::LaserScan>("/projected_scan", 1);
-    //cv::destroyWindow("depth");
+    // auto sub1 = pnh.subscribe("/pointcloud2_in", 100, laserCallback);
+    // auto sub2 = pnh.subscribe("/depth_image", 100, depth_img_callback);
+    // pub = pnh.advertise<sensor_msgs::LaserScan>("/projected_scan", 1);
+    // cv::destroyWindow("depth");
 }

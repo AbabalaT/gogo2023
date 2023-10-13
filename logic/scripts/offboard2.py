@@ -25,27 +25,27 @@ hit_moving_target = False
 passing_door = False
 
 eject_height = 0.25
-p3_height = 2.5
+p3_height = 1.8
 # 把飞机拿到穿门高度，看终端高度，填到下面
-cruise_height = 1.2
-passing_height = 1.5
+cruise_height = 0.6
+passing_height = 0.6
 
 # 往前 X+
 # 往左 Y+
-p1x = 2.51
-p1y = 1.08
+p1x = 2.1
+p1y = 1.5
 
-p2x = 5.37
-p2y = 1.17
+p2x = 4.4
+p2y = 0.65
 
-p3x = 3.48
-p3y = -1.22
+p3x = 4.6
+p3y = -2.95
 
-f1x = 6.38
-f1y = -1.77
+f1x = 0
+f1y = 0
 
-e1x = 9.16
-e1y = 0.46
+e1x = 0
+e1y = 0
 
 
 def tf_get_timer_callback(event):  # 位置获取
@@ -110,7 +110,7 @@ def mission_step_callback(event):
     elif current_step == 3:
         if abs(current_x - p1x) < 0.25:
             if abs(current_y - p1y) < 0.25:
-                rospy.set_param("/mission/step", 21)
+                rospy.set_param("/mission/step", 5)
     elif current_step == 21:
         if timer_cnt < 0:
             rospy.set_param("/mission/step", 4)
