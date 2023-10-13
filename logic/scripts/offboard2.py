@@ -22,37 +22,38 @@ teb_dog = 0.6
 
 teb_frame = Twist()
 
-
 hit_moving_target = False
-passing_door = False
+passing_door = True
 
-eject_height = 0.25
-p3_height = 1.8
+eject_height = 0.25 #投掷高度
+p3_height = 1.8     #定靶识别高度
+H_height = 1.5      #H识别高度
+
 # 把飞机拿到穿门高度，看终端高度，填到下面
-cruise_height = 0.6
-passing_height = 0.6
+cruise_height = 0.6     #巡航高度
+passing_height = 0.6    #穿门高度
 
-m1x = 1
-m1y = 1
+m1x = 3.87          #第一个点
+m1y = 1.21
 
 # 往前 X+
 # 往左 Y+
-p1x = 2
-p1y = 1
+p1x = 3.8
+p1y = 1.2
 
-p2x = 2
-p2y = -1
+p2x = 4.8
+p2y = -1.7
 
-p3x = 1
-p3y = -1
+p3x = 2.5
+p3y = -1.4
 
-f1x = 0
-f1y = 0
+f1x = 6.7
+f1y = -2.5
 
-e1x = 0
-e1y = 0
+e1x = 8.95
+e1y = 1.38
 
-H_height = 1.5
+
 def tf_get_timer_callback(event):  # 位置获取
     try:
         global trans, rot, current_x, current_y, current_z, current_yaw
