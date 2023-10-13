@@ -11,14 +11,13 @@ nav_teb = False
 
 current_state = State()
 pose = PoseStamped()
+current_step = 0
 
 current_x = 0
 current_y = 0
 current_z = 0
 current_yaw = 0
 timer_cnt = 3.0
-
-
 
 
 hit_moving_target = False
@@ -32,14 +31,14 @@ passing_height = 0.6
 
 # 往前 X+
 # 往左 Y+
-p1x = 2.1
-p1y = 1.5
+p1x = 2
+p1y = 1
 
-p2x = 4.4
-p2y = 0.65
+p2x = 2
+p2y = -1
 
-p3x = 4.6
-p3y = -2.95
+p3x = 1
+p3y = -1
 
 f1x = 0
 f1y = 0
@@ -67,11 +66,12 @@ p_height = 0.4
 
 
 def rc_cmd_callback(msg):
+    global current_step
     if msg.x < -0.98:
         if msg.y > 0.98:
             if msg.z > 0.98:
                 if msg.r < -0.98:
-                    rospy.set_param("/mission/step", 1)
+                    current_step = 1
 
 
 def cmd_vel_republish(msg):
@@ -93,9 +93,9 @@ def state_cb(msg):
 
 
 def mission_step_callback(event):
-    current_step = rospy.get_param("/mission/step")
+    global current_step
     rospy.loginfo("Current Step: %d", current_step)
-    rospy.loginfo("Current Detection: %d", rospy.get_param('/detect/id'))
+    rospy.loginfo("Current Detection: %d", rospy.get_param("/detect/id"))
     rospy.loginfo(
         "Current X: %f， Current Y: %f， Current Z: %f", current_x, current_y, current_z
     )
@@ -103,84 +103,88 @@ def mission_step_callback(event):
         rospy.loginfo("Waiting!")
     elif current_step == 1:
         if current_state.armed:
-            rospy.set_param("/mission/step", 2)
+            current_step = 2
     elif current_step == 2:
         if current_z > cruise_height - 0.15:
-            rospy.set_param("/mission/step", 3)
+            current_step = 3
     elif current_step == 3:
         if abs(current_x - p1x) < 0.25:
             if abs(current_y - p1y) < 0.25:
-                rospy.set_param("/mission/step", 5)
+                current_step = 21
     elif current_step == 21:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 4)
+            current_step = 4
     elif current_step == 4:
         if abs(current_x - p1x) < 0.15:
             if abs(current_y - p1y) < 0.15:
                 if abs(current_z - eject_height) < 0.15:
-                    rospy.set_param("/mission/step", 5)
+                    current_step = 5
     elif current_step == 5:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 6)
+            current_step = 6
     elif current_step == 6:
         if abs(current_x - p2x) < 0.25:
             if abs(current_y - p2y) < 0.25:
-                rospy.set_param("/mission/step", 22)
+                current_step = 22
     elif current_step == 22:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 7)
+            current_step = 7
     elif current_step == 7:
         if abs(current_x - p2x) < 0.15:
             if abs(current_y - p2y) < 0.15:
                 if abs(current_z - eject_height) < 0.15:
-                    rospy.set_param("/mission/step", 8)
+                    current_step = 8
     elif current_step == 8:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 9)
+            current_step = 9
     elif current_step == 9:
         if abs(current_x - p3x) < 0.25:
             if abs(current_y - p3y) < 0.25:
-                rospy.set_param("/mission/step", 23)
+                current_step = 23
     elif current_step == 23:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 10)
+            current_step = 10
     elif current_step == 10:
         if abs(current_x - p3x) < 0.15:
             if abs(current_y - p3y) < 0.15:
                 if abs(current_z - eject_height) < 0.15:
-                    rospy.set_param("/mission/step", 11)
+                    current_step = 11
     elif current_step == 11:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 12)
+            current_step = 12
     elif current_step == 12:
         if abs(current_x - f1x) < 0.25:
             if abs(current_y - f1y) < 0.25:
-                rospy.set_param("/mission/step", 13)
+                current_step = 13
     elif current_step == 13:
         if abs(current_x - f1x) < 0.15:
             if abs(current_y - f1y) < 0.15:
                 if abs(current_z - passing_height) < 0.15:
-                    rospy.set_param("/mission/step", 14)
+                    # rospy.set_param("/mission/step", 14)
+                    current_step = 14
     elif current_step == 14:
         if abs(current_x - e1x) < 0.25:
             if abs(current_y - e1y) < 0.25:
-                rospy.set_param("/mission/step", 24)
+                # rospy.set_param("/mission/step", 24)
+                current_step = 24
     elif current_step == 24:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 15)
+            # rospy.set_param("/mission/step", 15)
+            current_step = 15
     elif current_step == 15:
         if current_z < 0.1:
-            rospy.set_param("/mission/step", 16)
+            # rospy.set_param("/mission/step", 16)
+            current_step = 16
     elif current_step == 16:
         if timer_cnt < 0:
-            rospy.set_param("/mission/step", 17)
+            # rospy.set_param("/mission/step", 17)
+            current_step = 17
 
 
 def mission_act_callback(event):
     global pose, nav_teb, timer_cnt, servo_position
     global p1x, p1y, p2x, p2y, p3x, p3y, f1x, f1y, e1x, e1y
-    current_step = rospy.get_param("/mission/step")
-    # print("Step:", current_step)
+    global current_step
     if current_step == 0:
         pose.pose.position.x = 0
         pose.pose.position.y = 0
@@ -208,7 +212,7 @@ def mission_act_callback(event):
         timer_cnt = 5.0
     elif current_step == 21:
         timer_cnt = timer_cnt - 0.05
-        rospy.set('/mission/target', 'car')
+        rospy.set_param("/mission/target", "car")
         if rospy.get_param("/detect/id") != 10:
             pre_x = rospy.get_param("/target/x")
             pre_y = rospy.get_param("/target/y")
@@ -243,7 +247,7 @@ def mission_act_callback(event):
         nav_teb = True
     elif current_step == 22:
         timer_cnt = timer_cnt - 0.05
-        rospy.set_param('/mission/target', 'bridge')
+        rospy.set_param("/mission/target", "bridge")
         if rospy.get_param("/detect/id") != 10:
             pre_x = rospy.get_param("/target/x")
             pre_y = rospy.get_param("/target/y")
@@ -280,9 +284,9 @@ def mission_act_callback(event):
     elif current_step == 23:
         timer_cnt = timer_cnt - 0.05
         if hit_moving_target:
-            rospy.set_param('/mission/target', 'tank')
+            rospy.set_param("/mission/target", "tank")
         else:
-            rospy.set_param('/mission/target', 'pillbox')
+            rospy.set_param("/mission/target", "pillbox")
         if rospy.get_param("/detect/id") != 10:
             pre_x = rospy.get_param("/target/x")
             pre_y = rospy.get_param("/target/y")
@@ -333,14 +337,14 @@ def mission_act_callback(event):
         pose.pose.position.z = passing_height
         local_pos_pub.publish(pose)
         nav_teb = False
-        rospy.set_param('/obs/edge', 1)
+        rospy.set_param("/obs/edge", 1)
     elif current_step == 14:
         pose.pose.position.x = e1x
         pose.pose.position.y = e1y
         pose.pose.position.z = passing_height
         nav_teb = True
         timer_cnt = 3.0
-        rospy.set_param('/obs/edge', 0)
+        rospy.set_param("/obs/edge", 0)
     elif current_step == 24:
         timer_cnt = timer_cnt - 0.05
         if rospy.get_param("/detect/id") != 10:
@@ -387,11 +391,11 @@ if __name__ == "__main__":
     rospy.wait_for_service("/mavros/set_mode")
     set_mode_client = rospy.ServiceProxy("mavros/set_mode", SetMode)
 
-    rospy.set_param("/mission/step", 0)
+    # rospy.set_param("/mission/step", 0)
     rospy.set_param("/mission/cruise_height", 1.5)
     rospy.set_param("/mission/servo_pos", 0)
-    rospy.set_param('/obs/edge', 1)
-    rospy.set_param('/mission/target', 'car')
+    rospy.set_param("/obs/edge", 1)
+    rospy.set_param("/mission/target", "car")
     location_listener = tf.TransformListener()
     # Setpoint publishing MUST be faster than 2Hz
     rate = rospy.Rate(20)
