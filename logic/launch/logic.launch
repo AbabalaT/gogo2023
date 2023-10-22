@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-    <node pkg="logic" type="offboard2.py" name="logic_control_node" output="screen" respawn="true"/>
+    <node pkg="logic" type="offboard4.py" name="logic_control_node" output="screen" respawn="true"/>
     <node pkg="logic" type="servo_control.py" name="servo_control_node" output="screen" respawn="true"/>
 </launch>

@@ -38,8 +38,8 @@ m1y = 1.45
 
 # 往前 X+
 # 往左 Y+
-p1x = 4.6
-p1y = -2.95
+p1x = 4.4
+p1y = 0.65
 
 p2x = 1.1
 p2y = -3.35
@@ -49,6 +49,16 @@ p3y = -0.95
 
 f1x = 6.1
 f1y = 2.3
+
+s1x = 7.9 #f1前面的点
+s1y = 2.3
+
+s2x = 7.5 #第一个门
+s2y = 0.6
+
+s3x = 7.9 #第二个们
+s3y = -1.8
+
 
 e1x = 7.9
 e1y = -3.95
@@ -187,6 +197,24 @@ def mission_step_callback(event):
     elif current_step == 13:
         if abs(current_x - f1x) < 0.15:
             if abs(current_y - f1y) < 0.15:
+                if abs(current_z - passing_height) < 0.15:
+                    # rospy.set_param("/mission/step", 14)
+                    current_step = 201
+    elif current_step == 201:
+        if abs(current_x - s1x) < 0.15:
+            if abs(current_y - s1y) < 0.15:
+                if abs(current_z - passing_height) < 0.15:
+                    # rospy.set_param("/mission/step", 14)
+                    current_step = 202
+    elif current_step == 202:
+        if abs(current_x - s2x) < 0.15:
+            if abs(current_y - s2y) < 0.15:
+                if abs(current_z - passing_height) < 0.15:
+                    # rospy.set_param("/mission/step", 14)
+                    current_step = 203
+    elif current_step == 203:
+        if abs(current_x - s3x) < 0.15:
+            if abs(current_y - s3y) < 0.15:
                 if abs(current_z - passing_height) < 0.15:
                     # rospy.set_param("/mission/step", 14)
                     current_step = 14
@@ -380,13 +408,26 @@ def mission_act_callback(event):
         local_pos_pub.publish(pose)
         nav_teb = False
         rospy.set_param("/obs/edge", 1)
+    elif current_step == 201:
+        pose.pose.position.x = s1x
+        pose.pose.position.y = s1y
+        pose.pose.position.z = passing_height
+        local_pos_pub.publish(pose)
+    elif current_step == 202:
+        pose.pose.position.x = s2x
+        pose.pose.position.y = s2y
+        pose.pose.position.z = passing_height
+        local_pos_pub.publish(pose)
+    elif current_step == 203:
+        pose.pose.position.x = s3x
+        pose.pose.position.y = s3y
+        pose.pose.position.z = passing_height
+        local_pos_pub.publish(pose)
     elif current_step == 14:
         pose.pose.position.x = e1x
         pose.pose.position.y = e1y
         pose.pose.position.z = passing_height
-        nav_teb = True
-        timer_cnt = 3.0
-        rospy.set_param("/obs/edge", 0)
+        local_pos_pub.publish(pose)
     elif current_step == 24:
         timer_cnt = timer_cnt - 0.05
         if rospy.get_param("/detect/id") != 10:
